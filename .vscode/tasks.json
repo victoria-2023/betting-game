@@ -10,6 +10,19 @@
 			"problemMatcher": [
 				"$maven-compiler-java"
 			]
+		},
+		{
+			"label": "Run Spring Boot Application",
+			"type": "shell",
+			"command": "java",
+			"args": [
+				"-cp",
+				"target/classes:target/dependency/*",
+				"com.bettinggame.BettingGameApplication"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
 		}
 	]
 }

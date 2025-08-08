@@ -1,0 +1,7 @@
+com\bettinggame\performance\RTPCalculationTest$RoundResult.class
+com\bettinggame\service\PlayerServiceTest.class
+com\bettinggame\BettingGameApplicationTests.class
+com\bettinggame\performance\RTPCalculationTest.class
+com\bettinggame\controller\GameControllerTest.class
+com\bettinggame\integration\BettingGameIntegrationTest.class
+com\bettinggame\service\GameServiceTest.class

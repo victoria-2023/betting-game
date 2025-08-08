@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Betting Game Client</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .betting-open {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .betting-closed {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .form-group {
+            margin: 10px 0;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .countdown {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .results {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ffeaa7;
+        }
+        .winners {
+            margin-top: 10px;
+        }
+        .winner-item {
+            padding: 5px;
+            margin: 2px 0;
+            background-color: #d1ecf1;
+            border-radius: 3px;
+        }
+        .messages {
+            height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎲 Betting Game Client</h1>
+    
+    <div class="container">
+        <h2>Connection Status</h2>
+        <div id="connectionStatus" class="status">Disconnected</div>
+        <button onclick="connect()">Connect</button>
+        <button onclick="disconnect()">Disconnect</button>
+    </div>
+
+    <div class="container">
+        <h2>Player Registration</h2>
+        <div class="form-group">
+            <label for="nickname">Nickname:</label>
+            <input type="text" id="nickname" placeholder="Enter your nickname (3-20 characters)">
+        </div>
+        <div class="form-group">
+            <label for="initialBalance">Initial Balance:</label>
+            <input type="number" id="initialBalance" value="1000" min="1">
+        </div>
+        <button onclick="registerPlayer()">Register Player</button>
+    </div>
+
+    <div class="container">
+        <h2>Game Status</h2>
+        <div id="gameStatus" class="status">No game data</div>
+        <div id="countdown" class="countdown">--</div>
+        <button onclick="refreshGameState()">Refresh Status</button>
+    </div>
+
+    <div class="container">
+        <h2>Place Bet</h2>
+        <div class="form-group">
+            <label for="betNickname">Nickname:</label>
+            <input type="text" id="betNickname" placeholder="Your registered nickname">
+        </div>
+        <div class="form-group">
+            <label for="betNumber">Bet Number (1-10):</label>
+            <select id="betNumber">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="betAmount">Bet Amount:</label>
+            <input type="number" id="betAmount" value="100" min="1">
+        </div>
+        <button id="placeBetBtn" onclick="placeBet()">Place Bet</button>
+    </div>
+
+    <div class="container">
+        <h2>Latest Round Results</h2>
+        <div id="roundResults" class="results">
+            No results yet
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Messages</h2>
+        <div id="messages" class="messages"></div>
+        <button onclick="clearMessages()">Clear Messages</button>
+    </div>
+
+    <script>
+        let stompClient = null;
+        let gameState = {};
+
+        function connect() {
+            const socket = new SockJS('http://localhost:8080/ws');
+            stompClient = Stomp.over(socket);
+            
+            stompClient.connect({}, function (frame) {
+                setConnected(true);
+                addMessage('Connected: ' + frame);
+                
+                // Subscribe to game state updates
+                stompClient.subscribe('/topic/game-state', function (message) {
+                    const state = JSON.parse(message.body);
+                    updateGameState(state);
+                });
+                
+                // Subscribe to round results
+                stompClient.subscribe('/topic/round-results', function (message) {
+                    const results = JSON.parse(message.body);
+                    updateRoundResults(results);
+                });
+                
+                // Initial game state fetch
+                refreshGameState();
+            }, function (error) {
+                addMessage('Connection error: ' + error);
+                setConnected(false);
+            });
+        }
+
+        function disconnect() {
+            if (stompClient !== null) {
+                stompClient.disconnect();
+            }
+            setConnected(false);
+            addMessage('Disconnected');
+        }
+
+        function setConnected(connected) {
+            const status = document.getElementById('connectionStatus');
+            if (connected) {
+                status.innerHTML = 'Connected ✅';
+                status.className = 'status betting-open';
+            } else {
+                status.innerHTML = 'Disconnected ❌';
+                status.className = 'status betting-closed';
+            }
+        }
+
+        function registerPlayer() {
+            const nickname = document.getElementById('nickname').value;
+            const initialBalance = document.getElementById('initialBalance').value;
+            
+            if (!nickname || nickname.length < 3) {
+                alert('Nickname must be at least 3 characters');
+                return;
+            }
+            
+            fetch('http://localhost:8080/api/players/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    nickname: nickname,
+                    initialBalance: parseFloat(initialBalance)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.nickname) {
+                    addMessage(`Player registered: ${data.nickname} with balance $${data.balance}`);
+                    document.getElementById('betNickname').value = data.nickname;
+                } else {
+                    addMessage(`Registration failed: ${JSON.stringify(data)}`);
+                }
+            })
+            .catch(error => {
+                addMessage(`Registration error: ${error}`);
+            });
+        }
+
+        function placeBet() {
+            const nickname = document.getElementById('betNickname').value;
+            const betNumber = document.getElementById('betNumber').value;
+            const betAmount = document.getElementById('betAmount').value;
+            
+            if (!nickname) {
+                alert('Please enter your nickname');
+                return;
+            }
+            
+            fetch('http://localhost:8080/api/bets', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    nickname: nickname,
+                    betNumber: parseInt(betNumber),
+                    betAmount: parseFloat(betAmount)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.id) {
+                    addMessage(`Bet placed: $${data.betAmount} on number ${data.betNumber}`);
+                } else {
+                    addMessage(`Bet failed: ${JSON.stringify(data)}`);
+                }
+            })
+            .catch(error => {
+                addMessage(`Bet error: ${error}`);
+            });
+        }
+
+        function refreshGameState() {
+            fetch('http://localhost:8080/api/game/state')
+            .then(response => response.json())
+            .then(data => {
+                updateGameState(data);
+            })
+            .catch(error => {
+                addMessage(`Game state error: ${error}`);
+            });
+        }
+
+        function updateGameState(state) {
+            gameState = state;
+            const statusDiv = document.getElementById('gameStatus');
+            const countdownDiv = document.getElementById('countdown');
+            const placeBetBtn = document.getElementById('placeBetBtn');
+            
+            if (state.bettingOpen) {
+                statusDiv.innerHTML = `Round ${state.currentRoundId || 'N/A'} - Betting Open 🟢`;
+                statusDiv.className = 'status betting-open';
+                countdownDiv.innerHTML = `${state.timeRemaining || 0}s remaining`;
+                placeBetBtn.disabled = false;
+            } else {
+                statusDiv.innerHTML = `Round ${state.currentRoundId || 'N/A'} - Betting Closed 🔴`;
+                statusDiv.className = 'status betting-closed';
+                countdownDiv.innerHTML = 'Waiting for results...';
+                placeBetBtn.disabled = true;
+            }
+            
+            addMessage(`Game state updated: ${state.phase} - ${state.timeRemaining}s remaining`);
+        }
+
+        function updateRoundResults(results) {
+            const resultsDiv = document.getElementById('roundResults');
+            
+            let html = `
+                <h3>Round ${results.roundId} Results</h3>
+                <p><strong>Winning Number:</strong> ${results.winningNumber}</p>
+                <p><strong>End Time:</strong> ${new Date(results.endTime).toLocaleTimeString()}</p>
+            `;
+            
+            if (results.winners && results.winners.length > 0) {
+                html += '<div class="winners"><h4>Winners:</h4>';
+                results.winners.forEach(winner => {
+                    html += `<div class="winner-item">🏆 ${winner.nickname}: $${winner.winnings}</div>`;
+                });
+                html += '</div>';
+            } else {
+                html += '<p>No winners this round 😢</p>';
+            }
+            
+            resultsDiv.innerHTML = html;
+            addMessage(`Round ${results.roundId} completed! Winning number: ${results.winningNumber}`);
+        }
+
+        function addMessage(message) {
+            const messagesDiv = document.getElementById('messages');
+            const timestamp = new Date().toLocaleTimeString();
+            messagesDiv.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+        }
+
+        // Auto-connect on page load
+        window.onload = function() {
+            connect();
+        };
+    </script>
+</body>
+</html>

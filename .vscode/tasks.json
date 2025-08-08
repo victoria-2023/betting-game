@@ -1,0 +1,15 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build and Run Betting Game",
+			"type": "shell",
+			"command": "mvn clean compile spring-boot:run",
+			"group": "build",
+			"isBackground": true,
+			"problemMatcher": [
+				"$maven-compiler-java"
+			]
+		}
+	]
+}

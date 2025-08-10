@@ -171,9 +171,14 @@
     <script>
         let stompClient = null;
         let gameState = {};
+        
+        // Dynamic base URL - works for both localhost and deployed environment
+        const baseUrl = window.location.origin;
+        const wsUrl = baseUrl + '/ws';
+        const apiUrl = baseUrl + '/api';
 
         function connect() {
-            const socket = new SockJS('http://localhost:8080/ws');
+            const socket = new SockJS(wsUrl);
             stompClient = Stomp.over(socket);
             
             stompClient.connect({}, function (frame) {
@@ -228,7 +233,7 @@
                 return;
             }
             
-            fetch('http://localhost:8080/api/players/register', {
+            fetch(apiUrl + '/players/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -262,7 +267,7 @@
                 return;
             }
             
-            fetch('http://localhost:8080/api/bets', {
+            fetch(apiUrl + '/bets', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -287,7 +292,7 @@
         }
 
         function refreshGameState() {
-            fetch('http://localhost:8080/api/game/state')
+            fetch(apiUrl + '/game/state')
             .then(response => response.json())
             .then(data => {
                 updateGameState(data);

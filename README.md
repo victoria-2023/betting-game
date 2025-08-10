@@ -225,6 +225,51 @@ The application includes comprehensive error handling:
 - Thread-safe game round management
 - Background scheduling for automatic round progression
 
+## Deployment
+
+The application is ready for deployment on various platforms. Deployment files are included for:
+
+### Quick Deploy Options
+
+#### 1. Railway (Recommended for beginners)
+1. Push code to GitHub
+2. Connect Railway to your GitHub repo
+3. Deploy automatically using `railway.toml`
+
+#### 2. Render
+1. Push code to GitHub
+2. Connect Render to your GitHub repo
+3. Deploy using `render.yaml`
+
+#### 3. Heroku
+1. Install Heroku CLI
+2. Create Heroku app: `heroku create your-betting-game`
+3. Push code: `git push heroku main`
+
+#### 4. Docker
+```bash
+# Build and run locally
+docker build -t betting-game .
+docker run -p 8080:8080 betting-game
+
+# Or use Docker Compose
+docker-compose up --build
+```
+
+### Environment Variables for Production
+
+- `PORT`: Application port (default: 8080)
+- `DATABASE_URL`: Database connection string
+- `DATABASE_USERNAME`: Database username
+- `DATABASE_PASSWORD`: Database password
+- `SPRING_PROFILES_ACTIVE`: Set to `prod` for production
+
+### Production URLs
+After deployment, access:
+- **Game Interface**: `https://your-app-url.com`
+- **Health Check**: `https://your-app-url.com/actuator/health`
+- **WebSocket**: `wss://your-app-url.com/ws`
+
 ## Future Enhancements
 
 Potential improvements for production deployment:

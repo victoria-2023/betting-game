@@ -2,6 +2,7 @@ services:
   - type: web
     name: betting-game
     runtime: docker
+    dockerfilePath: ./Dockerfile.simple
     plan: free
     envVars:
       - key: SPRING_PROFILES_ACTIVE

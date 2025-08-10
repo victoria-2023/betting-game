@@ -278,16 +278,20 @@
                     betAmount: parseFloat(betAmount)
                 })
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.id) {
-                    addMessage(`Bet placed: $${data.betAmount} on number ${data.betNumber}`);
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
                 } else {
-                    addMessage(`Bet failed: ${JSON.stringify(data)}`);
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.error || 'Unknown error');
+                    });
                 }
             })
+            .then(data => {
+                addMessage(`Bet placed: $${data.betAmount} on number ${data.betNumber}`);
+            })
             .catch(error => {
-                addMessage(`Bet error: ${error}`);
+                addMessage(`Bet failed: ${error.message}`);
             });
         }
 

@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -57,7 +58,7 @@ public class GameController {
     }
     
     @PostMapping("/bets")
-    public ResponseEntity<BetResponse> placeBet(@Valid @RequestBody BetRequest betRequest) {
+    public ResponseEntity<?> placeBet(@Valid @RequestBody BetRequest betRequest) {
         try {
             Bet bet = gameService.placeBet(betRequest);
             
@@ -76,7 +77,8 @@ public class GameController {
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException | IllegalStateException e) {
             log.error("Error placing bet: ", e);
-            return ResponseEntity.badRequest().build();
+            Map<String, String> errorResponse = Map.of("error", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
         }
     }
     

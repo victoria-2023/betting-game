@@ -1,0 +1,14 @@
+# Simple Dockerfile for betting game
+FROM eclipse-temurin:17-jre-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy the JAR file (you'll need to build it first)
+COPY target/betting-game-backend-1.0.0.jar app.jar
+
+# Expose port
+EXPOSE 8080
+
+# Run the application
+CMD ["java", "-jar", "app.jar"]

@@ -1,31 +1,29 @@
 # Multi-stage build for optimization
-FROM maven:3.9.4-openjdk-17-slim AS build
+FROM eclipse-temurin:17-jdk-alpine AS build
+
+# Install Maven
+RUN apk add --no-cache maven
 
 # Set working directory
 WORKDIR /app
 
 # Copy Maven files
 COPY pom.xml .
-COPY .mvn .mvn
-COPY mvnw .
-
-# Make mvnw executable and fix line endings
-RUN sed -i 's/\r$//' mvnw && chmod +x mvnw
 
 # Download dependencies
-RUN ./mvnw dependency:go-offline -B
+RUN mvn dependency:go-offline -B
 
 # Copy source code
 COPY src ./src
 
 # Build the application
-RUN ./mvnw clean package -DskipTests
+RUN mvn clean package -DskipTests
 
 # Production stage
-FROM openjdk:17-jre-slim
+FROM eclipse-temurin:17-jre-alpine
 
-# Create non-root user
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+# Create non-root user (Alpine Linux uses addgroup and adduser)
+RUN addgroup -g 1000 appuser && adduser -u 1000 -G appuser -s /bin/sh -D appuser
 
 # Set working directory
 WORKDIR /app

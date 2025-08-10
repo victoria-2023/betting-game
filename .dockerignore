@@ -1,5 +1,6 @@
-# Maven
-target/
+# Maven (exclude target but keep the JAR file)
+target/*
+!target/*.jar
 !.mvn/wrapper/maven-wrapper.jar
 
 # IDE
